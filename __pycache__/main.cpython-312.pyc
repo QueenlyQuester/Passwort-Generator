@@ -3,17 +3,20 @@ import getpass
 import secrets
 from pathlib import Path
 from cryptography.fernet import Fernet
-from datetime import timedelta
+from datetime import datetime, timedelta
 from password_storage import PasswordStorage
 from password_generator import PasswordGenerator
 
 class PasswordManager:
+    DEFAULT_EXPIRY_DURATION = 30
+
     def __init__(self, data_directory='.'):
         self.data_directory = Path(data_directory).absolute()
         self.data_directory.mkdir(parents=True, exist_ok=True)
         self.data_file_path = self.data_directory / 'passwords.dat'
         self.password_storage = PasswordStorage(self.data_file_path)
         self.password_generator = PasswordGenerator()
+        self.key = self.generate_key()
         self.enforce_password_complexity()
 
     def enforce_password_complexity(self):
@@ -44,16 +47,17 @@ class PasswordManager:
     def is_password_expired(self, password):
         if 'expiry' not in password:
             return False
-        return password['expiry'] < datetime.now()
+        expiry_time = password['expiry']
+        return datetime.fromtimestamp(expiry_time) < datetime.now()
 
     def hash_password(self, password):
-        return Fernet(self.generate_key()).encrypt(password.encode()).decode()
+        return Fernet(self.key).encrypt(password.encode()).decode()
 
     def encrypt_password(self, password):
-        return Fernet(self.generate_key()).encrypt(password.encode())
+        return Fernet(self.key).encrypt(password.encode())
 
     def decrypt_password(self, encrypted_password):
-        return Fernet(self.generate_key()).decrypt(encrypted_password).decode()
+        return Fernet(self.key).decrypt(encrypted_password).decode()
 
     def read_password_from_stdin(self):
         return getpass.getpass('Enter your password: ')
@@ -62,7 +66,7 @@ class PasswordManager:
         password_data = {
             'service': service,
             'password': self.hash_password(password),
-            'expiry': datetime.now() + timedelta(days=DEFAULT_EXPIRY_DURATION)
+            'expiry': int(datetime.now() + timedelta(days=self.DEFAULT_EXPIRY_DURATION).timestamp())
         }
         self.password_storage.save_password(password_data)
 
