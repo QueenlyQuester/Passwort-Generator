@@ -7,12 +7,12 @@ def generate_password(length: int) -> str:
     return "".join(secrets.choice(all_characters) for _ in range(length))
 
 
-length_input = input("Enter the length of the password: ")
-
-try:
-    length = int(length_input)
-except ValueError:
-    print(f"Invalid input: {length_input}. Please enter an integer.")
-    exit()
+while True:
+    length_input = input("Enter the length of the password: ")
+    if length_input.isdigit():
+        length = int(length_input)
+        break
+    else:
+        print(f"Invalid input: {length_input}. Please enter an integer.")
 
 print(generate_password(length))
